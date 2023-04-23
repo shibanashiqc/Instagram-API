@@ -6,7 +6,7 @@ date_default_timezone_set('UTC');
 require __DIR__.'/../vendor/autoload.php';
 
 /////// CONFIG ///////
-$username = 'shibanashiqcssss_';
+$username = 'testt';
 $password = 'shibane';
 $debug = false;
 $truncatedDebug = false;

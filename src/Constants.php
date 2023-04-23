@@ -54,8 +54,8 @@ class Constants
     const X_FB_HTTP_Engine = 'Liger';
     const X_IG_Connection_Type = 'WIFI';
     const X_IG_Capabilities = '3brTvw8=';
-	const STARTUP_COUNTRY = 'TR';
-    const APP_STARTUP_COUNTRY = 'TR'; // "COUNTRY, ex: BR, US, RU, CA".
+	const STARTUP_COUNTRY = 'IN';
+    const APP_STARTUP_COUNTRY = 'IIN'; // "COUNTRY, ex: BR, US, RU, CA".
     // Supported Capabilities
     const SUPPORTED_CAPABILITIES = [
         [

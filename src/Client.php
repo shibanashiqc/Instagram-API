@@ -2,16 +2,19 @@
 
 namespace InstagramAPI;
 
-use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Cookie\CookieJar;
 use GuzzleHttp\Cookie\SetCookie;
-use GuzzleHttp\HandlerStack;
-use function GuzzleHttp\Psr7\modify_request;
-use InstagramAPI\Exception\InstagramException;
-use InstagramAPI\Exception\LoginRequiredException;
-use InstagramAPI\Exception\ServerMessageThrower;
-use InstagramAPI\Middleware\FakeCookies;
+use GuzzleHttp\Psr7\ServerRequest;
+use GuzzleHttp\Client as GuzzleClient;
+use Psr\Http\Message\RequestInterface;
 use InstagramAPI\Middleware\ZeroRating;
+use InstagramAPI\Middleware\FakeCookies;
+// use function GuzzleHttp\Psr7\modify_request;
+use Psr\Http\Message\ServerRequestInterface;
+use InstagramAPI\Exception\InstagramException;
+use InstagramAPI\Exception\ServerMessageThrower;
+use InstagramAPI\Exception\LoginRequiredException;
 use LazyJsonMapper\Exception\LazyJsonMapperException;
 use Psr\Http\Message\RequestInterface as HttpRequestInterface;
 use Psr\Http\Message\ResponseInterface as HttpResponseInterface;
@@ -1111,7 +1114,7 @@ class Client
         }
 
         // Set up headers that are required for every request.
-        $request = modify_request($request, $headers);
+        $request = $this->modify_request($request, $headers);
         
         
         // Check the Content-Type header for debugging.
@@ -1247,4 +1250,104 @@ class Client
     {
         return $this->_lastRequest;
     }
+    
+    public /**
+    * Clone and modify a request with the given changes.
+    *
+    * The changes can be one of:
+    * - method: (string) Changes the HTTP method.
+    * - set_headers: (array) Sets the given headers.
+    * - remove_headers: (array) Remove the given headers.
+    * - body: (mixed) Sets the given body.
+    * - uri: (UriInterface) Set the URI.
+    * - query: (string) Set the query string value of the URI.
+    * - version: (string) Set the protocol version.
+    *
+    * @param RequestInterface $request Request to clone and modify.
+    * @param array            $changes Changes to apply.
+    *
+    * @return RequestInterface
+    */
+   function modify_request(RequestInterface $request, array $changes)
+   {
+       if (!$changes) {
+           return $request;
+       }
+   
+       $headers = $request->getHeaders();
+   
+       if (!isset($changes['uri'])) {
+           $uri = $request->getUri();
+       } else {
+           // Remove the host header if one is on the URI
+           if ($host = $changes['uri']->getHost()) {
+               $changes['set_headers']['Host'] = $host;
+   
+               if ($port = $changes['uri']->getPort()) {
+                   $standardPorts = ['http' => 80, 'https' => 443];
+                   $scheme = $changes['uri']->getScheme();
+                   if (isset($standardPorts[$scheme]) && $port != $standardPorts[$scheme]) {
+                       $changes['set_headers']['Host'] .= ':'.$port;
+                   }
+               }
+           }
+           $uri = $changes['uri'];
+       }
+   
+       if (!empty($changes['remove_headers'])) {
+           $headers = $this->_caseless_remove($changes['remove_headers'], $headers);
+       }
+   
+       if (!empty($changes['set_headers'])) {
+           $headers = $this->_caseless_remove(array_keys($changes['set_headers']), $headers);
+           $headers = $changes['set_headers'] + $headers;
+       }
+   
+       if (isset($changes['query'])) {
+           $uri = $uri->withQuery($changes['query']);
+       }
+   
+       if ($request instanceof ServerRequestInterface) {
+           return (new ServerRequest(
+               isset($changes['method']) ? $changes['method'] : $request->getMethod(),
+               $uri,
+               $headers,
+               isset($changes['body']) ? $changes['body'] : $request->getBody(),
+               isset($changes['version'])
+                   ? $changes['version']
+                   : $request->getProtocolVersion(),
+               $request->getServerParams()
+           ))
+           ->withParsedBody($request->getParsedBody())
+           ->withQueryParams($request->getQueryParams())
+           ->withCookieParams($request->getCookieParams())
+           ->withUploadedFiles($request->getUploadedFiles());
+       }
+   
+       return new \GuzzleHttp\Psr7\Request(
+           isset($changes['method']) ? $changes['method'] : $request->getMethod(),
+           $uri,
+           $headers,
+           isset($changes['body']) ? $changes['body'] : $request->getBody(),
+           isset($changes['version'])
+               ? $changes['version']
+               : $request->getProtocolVersion()
+       );
+   }
+   public function _caseless_remove($keys, array $data)
+{
+    $result = [];
+
+    foreach ($keys as &$key) {
+        $key = strtolower($key);
+    }
+
+    foreach ($data as $k => $v) {
+        if (!in_array(strtolower($k), $keys)) {
+            $result[$k] = $v;
+        }
+    }
+
+    return $result;
+}
 }

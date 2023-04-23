@@ -41,7 +41,7 @@
     "require": {
         "php": "^8.1",
         "lazyjsonmapper/lazyjsonmapper": "^2.0",
-        "guzzlehttp/guzzle": "^6.2",
+        "guzzlehttp/guzzle": "^7.2",
         "ext-curl": "*",
         "ext-mbstring": "*",
         "ext-gd": "*",
